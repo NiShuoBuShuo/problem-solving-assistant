@@ -1,0 +1,12 @@
+backend/logs/
+backend/data/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.env
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.vite/
+frontend/node_modules/
+**/__pycache__/
+*.pyc

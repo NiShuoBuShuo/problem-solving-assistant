@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(chmod +x /Users/hpc/Documents/education_agent/start.sh)",
+      "Bash(venv/bin/pip install:*)",
+      "Bash(venv/bin/python -c \"import agent; print\\(''OK'', agent.API_TYPE, agent.MODEL\\)\")",
+      "Bash(bash -n /Users/hpc/Documents/education_agent/start.sh)",
+      "Bash(pkill -f uvicorn)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(venv/bin/python -c \":*)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v24.14.0/bin:$PATH\")",
+      "Bash(npm run:*)",
+      "Bash(pkill -f vite)",
+      "Bash(venv/bin/python -c \"import agent; print\\(''OK''\\)\")",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(npm install:*)",
+      "Bash(venv/bin/pytest tests/ -v --tb=short)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(npx playwright:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(where node:*)",
+      "Bash(where npm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(venv/Scripts/python.exe -c \"import yaml; print\\(''yaml ok''\\)\")",
+      "Bash(F:/education_agent/backend/venv/bin/python -c \"import yaml; print\\(''yaml ok''\\)\")",
+      "Bash(F:/education_agent/backend/venv/bin/python -c \"from skills import build_system_prompt; print\\(''skills ok''\\)\")",
+      "Bash(\"/f/education_agent/backend/venv/bin/python\" -c \"import yaml; print\\(''yaml ok''\\)\")",
+      "Bash(python \"F:/education_agent/backend/venv/bin/python\" -c \"import yaml\")",
+      "Bash(cmd.exe /c \"F:\\\\education_agent\\\\backend\\\\venv\\\\bin\\\\python -c \"\"import yaml; print\\(''yaml ok''\\)\"\"\")",
+      "Bash(cmd.exe /c \"cd F:\\\\education_agent\\\\backend && venv\\\\bin\\\\python.exe -c \"\"import yaml; print\\(''yaml ok''\\)\"\"\")",
+      "Bash(cmd.exe /c \"F:\\\\education_agent\\\\backend\\\\venv\\\\bin\\\\python.exe -c \"\"import yaml; print\\(''yaml ok''\\)\"\" 2>&1\")"
+    ]
+  }
+}
