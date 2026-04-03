@@ -10,3 +10,4 @@ frontend/.vite/
 frontend/node_modules/
 **/__pycache__/
 *.pyc
+backend/.venv-win/
