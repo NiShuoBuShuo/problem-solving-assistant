@@ -180,9 +180,17 @@ def load_sessions_from_disk() -> None:
 
 def _extract_json(text: str) -> dict:
     text = text.strip()
+    # Case 1: properly fenced  ```json ... ```
     m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
     if m:
         text = m.group(1).strip()
+    else:
+        # Case 2: opening fence present but closing fence missing
+        # (model response truncated or model forgot to close)
+        m2 = re.match(r"```(?:json)?\s*\n?([\s\S]*)", text)
+        if m2:
+            text = m2.group(1).strip()
+    # Case 3: no fence at all — use text as-is, fall through to { } search
     s, e = text.find("{"), text.rfind("}")
     if s != -1 and e != -1:
         candidate = text[s:e + 1]

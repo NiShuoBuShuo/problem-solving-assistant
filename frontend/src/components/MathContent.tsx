@@ -37,6 +37,11 @@ const components: Components = {
   },
 }
 
+/** Replace literal \n sequences (from LLM JSON output) with real newlines. */
+function normalize(raw: string): string {
+  return raw.replace(/\\n/g, '\n\n').replace(/\\t/g, '  ')
+}
+
 export function MathContent({ content, className = '' }: Props) {
   return (
     <div className={`prose prose-sm max-w-none text-gray-700 ${className}`}>
@@ -45,7 +50,7 @@ export function MathContent({ content, className = '' }: Props) {
         rehypePlugins={[rehypeKatex]}
         components={components}
       >
-        {content}
+        {normalize(content)}
       </ReactMarkdown>
     </div>
   )

@@ -3,10 +3,17 @@
   "configurations": [
     {
       "name": "frontend",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
       "port": 5173,
       "cwd": "frontend"
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": ".venv-win/Scripts/uvicorn.exe",
+      "runtimeArgs": ["main:app", "--reload", "--port", "8000"],
+      "port": 8000,
+      "cwd": "backend"
     }
   ]
 }

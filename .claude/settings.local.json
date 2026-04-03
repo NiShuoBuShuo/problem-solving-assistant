@@ -30,7 +30,16 @@
       "Bash(python \"F:/education_agent/backend/venv/bin/python\" -c \"import yaml\")",
       "Bash(cmd.exe /c \"F:\\\\education_agent\\\\backend\\\\venv\\\\bin\\\\python -c \"\"import yaml; print\\(''yaml ok''\\)\"\"\")",
       "Bash(cmd.exe /c \"cd F:\\\\education_agent\\\\backend && venv\\\\bin\\\\python.exe -c \"\"import yaml; print\\(''yaml ok''\\)\"\"\")",
-      "Bash(cmd.exe /c \"F:\\\\education_agent\\\\backend\\\\venv\\\\bin\\\\python.exe -c \"\"import yaml; print\\(''yaml ok''\\)\"\" 2>&1\")"
+      "Bash(cmd.exe /c \"F:\\\\education_agent\\\\backend\\\\venv\\\\bin\\\\python.exe -c \"\"import yaml; print\\(''yaml ok''\\)\"\" 2>&1\")",
+      "Bash(grep -v \"^d.*\\\\.$\")",
+      "Bash(pnpm install:*)",
+      "Bash(curl -s --max-time 2 http://localhost:8000/health)",
+      "Bash(pnpm exec:*)",
+      "Bash(curl -s --max-time 3 http://localhost:8000/health)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''backend already running, skills:'''', list\\(d[''''skills''''].keys\\(\\)\\)\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''OK, skills:'''', list\\(d[''''skills''''].keys\\(\\)\\)\\)\")",
+      "Bash(curl -s --max-time 5 http://localhost:8000/health)"
     ]
   }
 }

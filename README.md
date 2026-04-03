@@ -1,173 +1,363 @@
 # 教学解题 Agent
 
-一个面向初高中场景的教学式解题系统，支持文本/图片输入、分步讲解、LaTeX 渲染、追问、多解法、流式返回，以及后续步骤预取。
+面向初高中场景的 AI 教学辅导系统。输入题目文字或图片，自动识别学科，逐步引导解题，实时流式渲染公式与图示，支持追问和多解法切换。
 
-## 当前状态
+> **状态**：实验阶段，个人开发者本地运行。
 
-- 可用：提交题目、自动生成首步、继续分步解题、聊天追问、知识点总结、繁忙提示、流式渲染
-- 已补齐：日志、并发控制、任务队列、SSE 心跳、模型超时、步骤预取、会话持久化、后端测试、前端 E2E
-- 默认模型：`qwen3.6-plus`（DashScope OpenAI 兼容接口）
+---
+
+## 页面效果
+
+### 整体布局
+
+界面分为三个区域，固定高度不滚动页面：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  解  教学解题助手  初高中·分步引导·可追问   数学 物理 化学…  │  ← 顶部导航
+├───────────────────────┬─────────────────────────────────────┤
+│   题目区（上）         │                                     │
+│  ┌─────────────────┐  │        解题步骤区                   │
+│  │ 粘贴/输入题目    │  │                                     │
+│  │ 上传图片（可选） │  │  [学科标签] [题型]                  │
+│  │ [开始解题 →]    │  │                                     │
+│  └─────────────────┘  │  ┌──────────────────────────────┐  │
+├───────────────────────┤  │  📋 题型识别  一元二次方程   │  │
+│   对话区（下）         │  │  展开后显示推导内容、公式…    │  │
+│  ┌─────────────────┐  │  └──────────────────────────────┘  │
+│  │ AI 回复气泡      │  │  ┌──────────────────────────────┐  │
+│  │ 用户消息气泡     │  │  │  💡 解题思路  …              │  │
+│  │ [快速提问按钮]   │  │  └──────────────────────────────┘  │
+│  │ [输入框] [发送]  │  │              ↑ 流式生成中…          │
+│  └─────────────────┘  │  ┌──────────────────────────────┐  │
+│                        │  │  [下一步 →]                  │  │
+│                        │  └──────────────────────────────┘  │
+└───────────────────────┴─────────────────────────────────────┘
+```
+
+### 题目区
+
+- 文本框：粘贴题目，支持 LaTeX 公式（`$...$`）
+- 图片上传：拖拽或点击，支持多张图片
+- **渲染预览**按钮：切换原文/LaTeX 渲染视图
+- 解题完成后显示题目内容，支持一键"新问题"
+
+### 解题步骤区
+
+每一步以卡片形式依次出现，卡片包含：
+
+```
+┌─ 步骤卡片 ──────────────────────────────────────────┐
+│ 🎯  [题型标签] [解法标签（多解法时）]               │
+│     步骤标题（点击展开/折叠）              [完成 ✓] │
+├─────────────────────────────────────────────────────┤
+│  核心答案                                           │  ← 绿色高亮块（key_point）
+│  ─────────────────────────────────────────────────  │
+│  说明文字（Markdown + LaTeX 公式渲染）              │
+│                                                     │
+│  [详细过程 ▼]   ← 可折叠的推导细节                  │
+│                                                     │
+│  主要公式：$$ f(x) = ax^2 + bx + c $$              │
+│                                                     │
+│  ┌─ 图示 ──────────────────────────────────────┐   │
+│  │  TikZ / SVG / Mermaid 渲染结果               │   │
+│  └─────────────────────────────────────────────┘   │
+│                                                     │
+│  ✓ 本步结论                                        │
+│                                                     │
+│  [依据来源 ▼]  → 题内依据 / 背景知识（含公式）     │
+│                                                     │
+│  对这一步有疑问？点此提问                           │
+└─────────────────────────────────────────────────────┘
+```
+
+步骤类型覆盖：题型识别 → 题意理解 → 已知条件 → 求解目标 → 解题思路 → 推导过程 → 阶段结论 → 最终答案 → 检查验证 → 知识点总结
+
+生成过程中，步骤区底部显示**流式预览卡片**，文字逐字出现，带跳动光标。
+
+### 对话区
+
+```
+[新解法]  [新问题]
+
+快速提问：
+[为什么？] [换一种方法] [更详细] [更简洁] [知识点总结]
+
+┌─────────────────────────────────────────┐
+│                      用户消息  [头像] →  │
+│ ← [头像]  AI 回复（Markdown + 公式）    │
+└─────────────────────────────────────────┘
+[引用标记：引用：步骤标题  ✕]   ← 引用某步时显示
+
+[输入框：提问或追问… Enter发送] [→ 发送]
+```
+
+- 点击步骤卡片底部「对这一步有疑问？」→ 对话框自动带上步骤引用标记
+- AI 回复支持 LaTeX 公式实时渲染
+
+---
+
+## 使用流程
+
+### 基本解题流程
+
+```
+1. 在题目区输入题目文字（可粘贴 LaTeX 公式）
+   或上传题目图片（支持拖拽多张）
+
+2. 点击 [开始解题 →]
+   → 系统自动识别学科和题型
+   → 右侧步骤区显示学科标签（数学 / 物理 / 化学…）
+   → 第一步卡片自动生成（题型识别）
+
+3. 点击 [下一步 →] 逐步展开解题过程
+   → 每步以卡片形式出现，带流式预览
+   → 有公式的步骤自动渲染 LaTeX
+   → 几何 / 力学 / 函数图像类题目自动生成图示
+
+4. 所有步骤完成后，"下一步"按钮变为绿色"解题完成！"横幅
+   → 步骤区顶部显示"题解摘要"（各步核心结论汇总）
+```
+
+### 追问流程
+
+```
+方式一：快速提问
+  → 点击对话区的快捷按钮（为什么？/ 换一种方法 / 知识点总结…）
+
+方式二：针对某步提问
+  → 展开步骤卡片，点击底部"对这一步有疑问？点此提问"
+  → 对话输入框自动带上步骤引用标记
+  → 在对话框输入具体问题，Enter 发送
+
+方式三：自由输入
+  → 直接在对话框输入内容，Enter 发送
+```
+
+### 切换解法
+
+```
+点击对话区 [新解法] 按钮
+  → 或在对话框输入"换一种方法 / 另一种解法"
+  → AI 说明新解法与原解法的区别
+  → 新解法步骤以"解法2"标签显示，与原解法并列
+```
+
+### 重置
+
+```
+题目区右上角：
+  [重新解题] → 清空步骤，重新从第一步开始（保留题目）
+  [新问题]   → 清空全部，输入新题目
+```
+
+---
+
+## 技术栈
+
+| 层 | 技术 |
+|---|---|
+| 后端 | Python 3.12 · FastAPI · Uvicorn · SSE 流式 |
+| AI 接入 | Anthropic Claude / OpenAI 兼容接口（可切换）|
+| 前端 | React 18 · TypeScript · Vite · Tailwind CSS · Framer Motion |
+| 数学渲染 | KaTeX · remark-math · rehype-katex |
+| 图形渲染 | TikZ（自研 SVG 渲染，支持圆/椭圆/弧/箭头）· Mermaid（懒加载）· SVG |
+| 状态管理 | Zustand |
+| 包管理 | conda（后端）· pnpm（前端）|
+
+---
 
 ## 目录结构
 
-```text
-backend/
-  agent.py            核心解题与预取逻辑
-  main.py             FastAPI API
-  models.py           Pydantic 模型
-  queue_manager.py    并发与队列控制
-  log_config.py       日志配置
-  skills/prompts.py   系统提示词
-  tests/              后端测试
-frontend/
-  src/                React 前端
-  e2e/                Playwright E2E
-start.sh              一键启动脚本
+```
+education-agent/
+├── environment.yml          # conda 环境（Python 3.12 + 所有后端依赖）
+├── start.sh                 # 一键启动脚本（conda + pnpm）
+├── backend/
+│   ├── main.py              # FastAPI 路由
+│   ├── agent.py             # 核心解题逻辑 + 步骤预取
+│   ├── models.py            # Pydantic 数据模型
+│   ├── queue_manager.py     # 并发队列控制
+│   ├── log_config.py        # 日志配置
+│   ├── requirements.txt     # pip 依赖列表（由 environment.yml 安装）
+│   ├── .env.example         # 环境变量模板 ← 复制为 .env 后填写
+│   ├── skills/              # 层级化 Skills 插件
+│   │   ├── SKILL.md         # 技能注册总表
+│   │   ├── skill_loader.py  # 技能加载器（自动按题型匹配子技能）
+│   │   ├── core/SKILL.md    # 通用规范（格式 / LaTeX / 图示）
+│   │   └── subjects/        # 学科技能 + 子技能（代数/几何/力学…）
+│   └── tests/               # pytest 单元测试
+└── frontend/
+    ├── package.json
+    ├── pnpm-lock.yaml       # pnpm 锁文件
+    ├── src/
+    │   ├── components/      # ProblemPanel · StepPanel · StepCard
+    │   │                    # ChatPanel · MathContent · TikzDiagram · MermaidDiagram
+    │   ├── hooks/useSSE.ts  # SSE 流式接收 Hook
+    │   ├── store/           # Zustand 全局状态
+    │   └── types/           # TypeScript 类型定义
+    └── e2e/                 # Playwright E2E 测试（12 项）
 ```
 
-## 运行要求
+---
 
-- Python 3.9+
-- Node.js 24.x
-- `backend/venv` 已安装依赖
-- `frontend/node_modules` 已安装依赖
+## 快速开始
 
-## 快速启动
+### 前置要求
 
-根目录执行：
+- [conda](https://docs.conda.io/en/latest/miniconda.html)（Miniconda 或 Anaconda）
+- [Node.js](https://nodejs.org/) 18+
+- [pnpm](https://pnpm.io/)：`npm install -g pnpm`
+
+### 1. 克隆仓库
+
+```bash
+git clone <repo-url>
+cd education-agent
+```
+
+### 2. 创建 Python 环境
+
+```bash
+conda env create -f environment.yml
+# 创建名为 education-agent 的 conda 环境，约 1-2 分钟
+```
+
+### 3. 安装前端依赖
+
+```bash
+cd frontend
+pnpm install
+cd ..
+```
+
+### 4. 配置 API
+
+```bash
+cp backend/.env.example backend/.env
+# 用编辑器打开 backend/.env，填入 API 密钥和模型配置
+```
+
+### 5. 启动
 
 ```bash
 ./start.sh
 ```
 
-启动后：
+打开浏览器访问 **http://localhost:5173**
 
-- 前端：[http://localhost:5173](http://localhost:5173)
-- 后端：[http://localhost:8000](http://localhost:8000)
-- 健康检查：[http://localhost:8000/health](http://localhost:8000/health)
+---
 
-## 环境配置
+## 环境变量
 
-配置文件在 [backend/.env](/Users/hpc/Documents/education_agent/backend/.env)，示例在 [backend/.env.example](/Users/hpc/Documents/education_agent/backend/.env.example)。
+配置文件：`backend/.env`，模板：`backend/.env.example`
 
-关键参数：
+| 变量 | 说明 | 默认值 |
+|---|---|---|
+| `API_TYPE` | `anthropic` 或 `openai` | `anthropic` |
+| `MODEL` | 模型名称 | `claude-sonnet-4-6` |
+| `ANTHROPIC_API_KEY` | Anthropic API Key | — |
+| `OPENAI_API_KEY` | OpenAI 兼容接口 Key | — |
+| `API_BASE_URL` | OpenAI 兼容端点（`openai` 模式必填）| — |
+| `OPENAI_ENABLE_THINKING` | 开启深度思考（建议关闭，减少延迟）| `false` |
+| `PREFETCH_STEPS` | 预取后续步骤数，`0` 关闭 | `0` |
+| `PERSIST_SESSIONS` | 会话持久化（重启后可恢复）| `true` |
+| `SESSION_STORE_PATH` | 持久化路径 | `data/sessions.json` |
 
-- `API_TYPE`
-  - `openai` 或 `anthropic`
-- `MODEL`
-  - 当前使用的模型名
-- `OPENAI_API_BASE_URL`
-  - OpenAI 兼容端点
-- `OPENAI_ENABLE_THINKING`
-  - 默认 `false`
-  - 建议保持关闭，减少首包时延
-- `PREFETCH_STEPS`
-  - 预取后续步骤数
-  - `0` 关闭预取，`1` 表示预取 1 步
-- `PERSIST_SESSIONS`
-  - `true` 时会把会话写到磁盘
-- `SESSION_STORE_PATH`
-  - 默认 `data/sessions.json`
+**OpenAI 兼容接口（如阿里云 DashScope）：**
 
-## 系统行为
+```env
+API_TYPE=openai
+MODEL=qwen3.6-plus
+OPENAI_API_KEY=sk-xxxxxxxx
+API_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+PREFETCH_STEPS=1
+```
 
-### 1. 自动首步
+**Anthropic 官方接口：**
 
-提交题目后，前端会自动触发第一步生成，不需要先点一次“下一步”。
+```env
+API_TYPE=anthropic
+MODEL=claude-sonnet-4-6
+ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
+PREFETCH_STEPS=1
+```
 
-### 2. 流式返回
+---
 
-后端通过 SSE 持续推送模型输出。
+## API 端点
 
-- 正常文本块：`data: {"chunk": "..."}`
-- 完成帧：`data: {"step": {...}, "done": true}`
-- 繁忙帧：`data: {"busy": true, "error": "..."}`
-- 心跳：`: ping`
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/solve` | 提交题目，创建解题会话（multipart/form-data）|
+| GET | `/api/next-step/{session_id}` | 获取下一步（SSE 流式）|
+| POST | `/api/chat` | 追问对话（SSE 流式）|
+| GET | `/api/session/{session_id}` | 查看会话状态 |
+| GET | `/api/queue` | 并发队列与运行时统计 |
+| GET | `/health` | 健康检查 |
 
-### 3. 并发与队列
+**SSE 帧格式：**
 
-默认参数在 [backend/queue_manager.py](/Users/hpc/Documents/education_agent/backend/queue_manager.py)：
+```
+data: {"chunk": "..."}               # 流式文本块（逐字推送）
+data: {"step": {...}, "done": true}  # 步骤完成（含完整 Step JSON）
+data: {"busy": true, "error": "..."} # 服务繁忙
+: ping                                # 心跳保活（每 8 秒）
+```
 
-- 最大并发：`4`
-- 最大队列：`12`
+---
 
-当队列已满时，前端会收到繁忙提示，而不是无响应卡死。
+## Skills 插件系统
 
-### 4. 预取策略
+提示词采用层级化 Skills 架构，参考 Claude Code 的 SKILL.md 设计。加载器根据检测到的学科和题型自动组合提示词：
 
-当用户看到当前步骤后，后端会在有空闲执行槽位时预取后续步骤。
+```
+core/SKILL.md           通用规范（LaTeX · 图示 · 输出格式）
+    +
+subjects/{subject}/SKILL.md     学科解题流程
+    +
+subjects/{subject}/{sub}/SKILL.md   题型专项规范（自动匹配）
+```
 
-- 预取只占空闲槽位
-- 没空闲时直接跳过，不阻塞用户请求
-- 聊天追问、换解法、总结等上下文变化会自动使旧预取失效
+当前内置子技能：
 
-### 5. 会话持久化
+| 学科 | 子技能 |
+|---|---|
+| 数学 | algebra（代数/方程）· geometry（几何）· function（函数/导数/数列）· probability（概率统计）|
+| 物理 | mechanics（力学）· electro（电磁学）|
+| 化学/生物/语文/英语 | 学科级规范 |
 
-启用 `PERSIST_SESSIONS=true` 后：
+**扩展子技能**：在学科目录下新建子目录 + `SKILL.md`，在父 `SKILL.md` 的 `sub_skills` 列表中注册，无需改代码。
 
-- 会话会写入 `SESSION_STORE_PATH`
-- 服务重启后会自动恢复
-- 恢复时只还原稳定状态，不恢复运行中的预取任务
-
-## API
-
-主要接口：
-
-- `POST /api/solve`
-  - 创建解题会话
-- `GET /api/next-step/{session_id}`
-  - 获取下一步，SSE
-- `POST /api/chat`
-  - 聊天追问，SSE
-- `GET /api/session/{session_id}`
-  - 查看当前会话状态
-- `GET /api/queue`
-  - 查看队列和运行时统计
-- `GET /health`
-  - 健康检查 + 运行状态
+---
 
 ## 测试
 
-### 后端
+### 后端单元测试
 
 ```bash
+conda activate education-agent
 cd backend
-./venv/bin/pytest -q
+pytest -q
+# 36 项通过
 ```
 
-### 前端构建
+### 前端 E2E 测试
 
 ```bash
+# 终端 1：启动服务
+./start.sh
+
+# 终端 2：运行测试
 cd frontend
-npm run build
+pnpm exec playwright test
+# 12 项通过
 ```
 
-### 前端 E2E
+---
 
-先启动前后端，再执行：
+## 已知限制
 
-```bash
-cd frontend
-npx playwright test
-```
-
-## 当前验证结果
-
-- 后端测试：`36` 项通过
-- 前端 E2E：`12` 项通过
-
-## 已知边界
-
-- 会话目前持久化到本地 JSON 文件，不是数据库方案
-- `frontend/node_modules` 与 `backend/venv` 当前直接位于项目目录
-- 前端生产包体仍偏大，构建会有 chunk size warning
-- 多进程部署下，会话文件需要改成共享存储或数据库
-
-## 建议的后续演进
-
-如果后面继续迭代，优先级建议是：
-
-1. 把本地 JSON 会话存储升级为数据库
-2. 给预取增加命中率、耗时、成本统计
-3. 做前端分包和静态资源优化
-4. 增加登录、用户隔离、会话清理策略
+- 会话持久化使用本地 JSON 文件，不适合多进程部署
+- 多进程部署需将会话存储改为 Redis 或数据库
+- 前端 mermaid 包体较大（gzip 后约 148KB），首次渲染流程图时按需加载

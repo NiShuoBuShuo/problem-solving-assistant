@@ -1,12 +1,45 @@
-backend/logs/
-backend/data/
-backend/__pycache__/
-backend/.pytest_cache/
+# ── Python ────────────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+
+# 本地虚拟环境（项目使用 conda，不需要 venv）
+backend/venv/
+backend/.venv*/
+
+# ── 环境与密钥 ────────────────────────────────────────────
 backend/.env
+# backend/.env.example 应提交到版本库
+
+# ── 运行时数据 ────────────────────────────────────────────
+backend/data/
+backend/logs/
+
+# ── 测试缓存 ──────────────────────────────────────────────
+backend/.pytest_cache/
+.coverage
+htmlcov/
+
+# ── 前端依赖 ──────────────────────────────────────────────
+frontend/node_modules/
+
+# 使用 pnpm；npm/yarn lockfile 不提交
+frontend/package-lock.json
+frontend/yarn.lock
+
+# ── 前端构建产物 ──────────────────────────────────────────
 frontend/dist/
+frontend/.vite/
+
+# ── Playwright ────────────────────────────────────────────
 frontend/playwright-report/
 frontend/test-results/
-frontend/.vite/
-frontend/node_modules/
-**/__pycache__/
-*.pyc
+
+# ── 编辑器 ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+desktop.ini
